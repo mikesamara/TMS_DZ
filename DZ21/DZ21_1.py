@@ -28,8 +28,6 @@ def test_connection(conn):
     query = '''
             select 
                 f.flight_id,
-                f.flight_no, 
-                f.status ,
                 case  
                     when extract(epoch from(f.actual_departure - f.scheduled_departure)) / 60 > 0  or extract(epoch from(f.actual_arrival - f.scheduled_arrival)) / 60 > 0 then 'задержался'
                     when f.actual_departure is null then 'отменен'
@@ -41,30 +39,29 @@ def test_connection(conn):
     with conn.cursor() as cursos:
 
         cursos.execute(query=query)
-        print(cursos.fetchall())
+        result = cursos.fetchall()
+
+        updates = []
+        count = 0
+        for row in result:
+            flight_id = row[0]
+            new_status = row[1]
+
+            update_dict = {'flight_id': flight_id, 'new_status': new_status}
+            updates.append(update_dict)
+            count += 1
+
+        
+        return updates, count
 
 
 
-def list_dupdate_flights_status(updates):
-    for i in updates:
-        print(i['flight_id'])
-        print(i['new_status'])
-        print(f'flight_id = {i['flight_id']}')
-        print(f'update booking.test.flights f  set status = {i['new_status']} where f.flight_id = {i['flight_id']}')
+def list_dupdate_flights_status(updates, count):
+    df = pd.DataFrame(updates)
+    df.to_excel('/Users/maiksamarchuk/PycharmProjects/teachsills/DZ/TMS_DZ/DZ21/new_file_status.xlsx', index=False)
 
-#посмотреть что такое курсос, как его испольовать и как обновлять данные 
+    print(f'Кол-во обновленных записей {count}')
 
 
-'''update booking.test.flights f  
-set status = 'jhsdf'
-where f.flight_id = 3'''
-
-
-
-updates = [
-    {"flight_id": 123, "new_status": "Delayed"},
-    {"flight_id": 456, "new_status": "Cancelled"}
-]
-
-#list_dict(updates)
-test_connection(conn)
+updates, count = test_connection(conn)
+list_dupdate_flights_status(updates, count)
